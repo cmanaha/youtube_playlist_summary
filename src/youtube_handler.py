@@ -57,40 +57,74 @@ class YoutubeHandler:
             'extract_flat': True,
             'force_generic_extractor': True
         }
-        
-    def _extract_video_id(self, url: str) -> str:
-        """Extract video ID from URL."""
-        pattern = r'(?:v=|\/)([0-9A-Za-z_-]{11}).*'
-        match = re.search(pattern, url)
-        return match.group(1) if match else None
-        
+    
+    def _validate_youtube_playlist_url(self, url: str) -> bool:
+        """Validate if the URL is a YouTube playlist URL."""
+        youtube_patterns = [
+            r'youtube\.com/playlist\?list=[A-Za-z0-9_-]+$',  # Standard playlist URL
+            r'youtube\.com/watch\?v=[A-Za-z0-9_-]+&list=[A-Za-z0-9_-]+',  # Video in playlist URL
+            r'youtu\.be/[A-Za-z0-9_-]+\?list=[A-Za-z0-9_-]+'  # Shortened URL with playlist
+        ]
+        return any(re.search(pattern, url) is not None for pattern in youtube_patterns)
+    
     def get_playlist_videos(self, playlist_url: str) -> tuple[list, str]:
         """Get list of videos from a playlist."""
-        ydl_opts = {
-            'quiet': True,
-            'extract_flat': True,
-            'force_generic_extractor': True
-        }
+        # Validate URL first
+        if not playlist_url:
+            raise ValueError("No playlist URL provided. Please provide a valid YouTube playlist URL.")
+            
+        if not self._validate_youtube_playlist_url(playlist_url):
+            raise ValueError(
+                "Invalid YouTube playlist URL. Please provide a URL in one of these formats:\n"
+                "- https://www.youtube.com/playlist?list=PLAYLIST_ID\n"
+                "- https://www.youtube.com/watch?v=VIDEO_ID&list=PLAYLIST_ID\n"
+                "- https://youtu.be/VIDEO_ID?list=PLAYLIST_ID"
+            )
         
-        # Use context manager to suppress output if not verbose
-        with suppress_stdout_stderr() if not self.verbose else nullcontext():
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        try:
+            with yt_dlp.YoutubeDL(self.ydl_opts) as ydl:
                 result = ydl.extract_info(playlist_url, download=False)
-        
-        playlist_title = result.get('title', 'playlist')
-        videos = []
-        
-        for entry in result['entries']:
-            try:
-                video_info = self._get_video_info(entry)
-                if video_info:
-                    videos.append(video_info)
-            except Exception as e:
-                print(f"Warning: Could not process video {entry.get('title', 'Unknown')}: {str(e)}")
-                continue
-        
-        self.videos = videos
-        return videos, playlist_title
+                
+            if not result or 'entries' not in result:
+                raise ValueError(
+                    "Could not find any videos in the playlist. "
+                    "Please check if the playlist exists and is not private."
+                )
+                
+            playlist_title = result.get('title', 'playlist')
+            videos = []
+            
+            for entry in result['entries']:
+                try:
+                    video_info = self._get_video_info(entry)
+                    if video_info:
+                        videos.append(video_info)
+                except Exception as e:
+                    if self.verbose:
+                        print(f"Warning: Could not process video {entry.get('title', 'Unknown')}: {str(e)}")
+                    continue
+            
+            if not videos:
+                raise ValueError(
+                    "No accessible videos found in the playlist. "
+                    "The playlist might be empty or all videos might be private/unavailable."
+                )
+            
+            self.videos = videos
+            return videos, playlist_title
+            
+        except yt_dlp.utils.DownloadError as e:
+            raise ValueError(
+                f"Could not access the playlist. Please check that:\n"
+                f"1. The URL is correct\n"
+                f"2. The playlist is not private\n"
+                f"3. The playlist still exists\n"
+                f"Original error: {str(e)}"
+            ) from None
+        except Exception as e:
+            raise ValueError(
+                f"An error occurred while processing the playlist: {str(e)}"
+            ) from None
     
     @retry_on_exception(retries=3, delay=2)
     def _get_video_info(self, entry: Dict) -> Optional[Dict]:
