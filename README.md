@@ -86,9 +86,10 @@ Code structure:
 - markdown_generator.py: Report generation
 - utils.py: Helper functions and system detection
 
-## License
+## Author & License
 
-MIT License - See LICENSE file for details
+Author: **Carlos Manzanedo Rueda** ([@cmanaha](https://github.com/cmanaha))
+License:  MIT License - See LICENSE file for details
 
 ## Contributing
 
