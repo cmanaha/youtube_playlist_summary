@@ -11,7 +11,10 @@ from utils import (
     save_markdown, 
     print_configuration,
     SystemInfo,
-    console
+    console,
+    load_transcripts,
+    save_transcripts,
+    TranscriptData
 )
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
@@ -81,6 +84,10 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument('--verbose', action='store_true',
         help='Show detailed progress information',
         default=env_verbose)
+    parser.add_argument('--extract-transcripts', type=str,
+        help='Extract transcripts and save to specified zip file')
+    parser.add_argument('--with-transcripts', type=str,
+        help='Use previously extracted transcripts from zip file')
     args = parser.parse_args()
     
     # If playlist_url is not provided in command line, use environment variable
@@ -238,27 +245,50 @@ def main():
     # Print configuration if verbose mode is enabled
     print_configuration(args, playlist_url)
     
+    # Load saved transcripts if provided
+    saved_transcripts = None
+    if args.with_transcripts:
+        saved_transcripts = load_transcripts(args.with_transcripts)
+        print(f"\nLoaded {len(saved_transcripts)} transcripts from {args.with_transcripts}")
+    
     # Setup components
-    youtube_handler = YoutubeHandler(verbose=args.verbose)
-    transcript_processor = TranscriptProcessor(
-        batch_size=args.batch_size,
-        num_gpus=args.num_gpus,
-        num_cpus=args.num_cpus,
-        model=args.model,
-        num_threads=args.threads
-    )
+    youtube_handler = YoutubeHandler(verbose=args.verbose, saved_transcripts=saved_transcripts)
+    
+    # Get playlist information
+    videos, playlist_title = youtube_handler.get_playlist_videos(playlist_url)
+    
+    # If we're just extracting transcripts, do that and exit
+    if args.extract_transcripts:
+        transcripts = {}
+        for video in videos:
+            transcript = youtube_handler.get_transcript(video['video_id'])
+            transcripts[video['video_id']] = TranscriptData(
+                video_id=video['video_id'],
+                title=video['title'],
+                url=video['url'],
+                description=video['description'],
+                transcript=transcript,
+                timestamp=datetime.now()
+            )
+        save_transcripts(transcripts, args.extract_transcripts)
+        print(f"\nSaved {len(transcripts)} transcripts to {args.extract_transcripts}")
+        return
     
     # Set category filter if provided
     try:
+        transcript_processor = TranscriptProcessor(
+            batch_size=args.batch_size,
+            num_gpus=args.num_gpus,
+            num_cpus=args.num_cpus,
+            model=args.model,
+            num_threads=args.threads
+        )
         transcript_processor.set_filter_categories(args.categories)
         if args.categories:
             print(f"\nFiltering videos by categories: {args.categories}")
     except ValueError as e:
         print(f"\nError: {str(e)}")
         return
-    
-    # Get playlist information
-    videos, playlist_title = youtube_handler.get_playlist_videos(playlist_url)
     
     # Initialize markdown generator with playlist title
     markdown_generator = MarkdownGenerator(playlist_title)
