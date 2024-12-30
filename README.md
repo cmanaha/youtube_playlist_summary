@@ -1,8 +1,6 @@
 # YouTube Playlist Analyzer
 
-![GitHub Workflow Status](https://github.com/cmanaha/youtube_playlist_summary/actions/workflows/workflows/python-tests.yml/badge.svg)
-
-A powerful tool for analyzing YouTube playlists using AI to categorize and summarize video content. Perfect for quickly digesting large playlists and organizing videos by topic.
+A tool for analyzing YouTube playlists using AI to categorize and summarize video content. Perfect for quickly digesting large playlists and organizing videos by topic.
 
 ## Overview
 
@@ -10,22 +8,12 @@ This tool downloads YouTube playlist transcripts, uses LLMs to categorize and su
 
 ## Features
 - 🤖 Advanced LLM Integration with Ollama
-- 🚀 High Performance Processing
-- 📊 Smart Video Categorization
-- 📝 Intelligent Video Summarization
+- 📊 Ollama Used for Smart Video Categorization (by default using llama3.2)
+- 📝 Intelligent Video Summarization (by default using llama3.2)
 - 🎯 Flexible Category Filtering
 - 📈 Progress Tracking & Statistics
-- ⚙️ Extensive Configuration Options
 - 🖥️ Hardware Acceleration Support
 
-- AI-powered video categorization and summarization using LLaMA models
-- Concurrent video processing with configurable batch sizes
-- GPU acceleration support for faster processing
-- Category filtering to focus on specific topics
-- Beautiful markdown output with thumbnails and summaries
-- Progress tracking with ETA estimation
-- Environment variable configuration
-- Detailed performance metrics in verbose mode
 
 ## Installation
 
