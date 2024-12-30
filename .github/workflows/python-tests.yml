@@ -46,15 +46,16 @@ jobs:
         PYTHONPATH: ${{ github.workspace }}/src
       run: |
         python -m pytest
-        ls -la  # Debug: List files to verify coverage.xml exists
         
-    - name: Display coverage report
+    - name: Generate Coverage Report
       run: |
-        python -m coverage report
+        coverage report
+        coverage html
         
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+    - name: Upload Coverage Report
+      uses: actions/upload-artifact@v3
       with:
-        file: ./coverage.xml
-        fail_ci_if_error: true
-        verbose: true 
+        name: coverage-report
+        path: |
+          htmlcov/
+          .coverage 
