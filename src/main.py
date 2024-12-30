@@ -260,18 +260,41 @@ def main():
     # If we're just extracting transcripts, do that and exit
     if args.extract_transcripts:
         transcripts = {}
-        for video in videos:
-            transcript = youtube_handler.get_transcript(video['video_id'])
-            transcripts[video['video_id']] = TranscriptData(
-                video_id=video['video_id'],
-                title=video['title'],
-                url=video['url'],
-                description=video['description'],
-                transcript=transcript,
-                timestamp=datetime.now()
+        total_videos = len(videos)
+        
+        # Create progress bar for transcript extraction
+        with create_progress() as progress:
+            task = progress.add_task(
+                "[cyan]Extracting transcripts...",
+                total=total_videos
             )
+            
+            for video in videos:
+                if args.verbose:
+                    console.log(f"Processing transcript for: {video['title']}")
+                
+                transcript = youtube_handler.get_transcript(video['video_id'])
+                if transcript:
+                    transcripts[video['video_id']] = TranscriptData(
+                        video_id=video['video_id'],
+                        title=video['title'],
+                        url=video['url'],
+                        description=video['description'],
+                        transcript=transcript,
+                        timestamp=datetime.now()
+                    )
+                    if args.verbose:
+                        console.log(f"[green]✓[/green] Transcript extracted: {video['title']}")
+                else:
+                    if args.verbose:
+                        console.log(f"[red]✗[/red] No transcript available: {video['title']}")
+                
+                progress.update(task, advance=1)
+        
+        # Save transcripts after collection
         save_transcripts(transcripts, args.extract_transcripts)
-        print(f"\nSaved {len(transcripts)} transcripts to {args.extract_transcripts}")
+        console.print(f"\n[green]Successfully saved[/green] {len(transcripts)} transcripts to {args.extract_transcripts}")
+        console.print(f"[yellow]Skipped[/yellow] {total_videos - len(transcripts)} videos with no available transcripts")
         return
     
     # Set category filter if provided
