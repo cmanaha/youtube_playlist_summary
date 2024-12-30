@@ -1,0 +1,21 @@
+youtube-playlist-analyzer/
+├── venv/
+├── .env
+├── requirements.txt
+├── requirements-dev.txt
+├── pytest.ini
+├── .coveragerc
+├── src/
+│   ├── __init__.py
+│   ├── main.py
+│   ├── youtube_handler.py
+│   ├── transcript_processor.py
+│   └── markdown_generator.py
+├── tests/
+│   ├── __init__.py
+│   ├── conftest.py
+│   ├── test_youtube_handler.py
+│   ├── test_transcript_processor.py
+│   └── test_markdown_generator.py
+├── output/
+└── README.md 
