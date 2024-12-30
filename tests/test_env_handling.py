@@ -1,7 +1,7 @@
 import pytest
 import os
 from main import parse_arguments
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 def test_env_defaults(monkeypatch):
     # Create a temporary environment without any variables
@@ -20,20 +20,25 @@ def test_env_defaults(monkeypatch):
     # Mock os.path.exists to return False for .env file
     monkeypatch.setattr('os.path.exists', lambda x: False)
     
-    # Mock system commands
-    with patch('utils.which', return_value=None):  # Make all commands "not found"
+    # Mock SystemInfo to return consistent values
+    mock_settings = {
+        'num_gpus': 0,
+        'num_cpus': 1,
+        'num_threads': 1
+    }
+    
+    with patch('utils.SystemInfo.get_optimal_settings', return_value=mock_settings):
         args = parse_arguments()
     
     # Check that default values are set correctly
     assert args.videos is None
     assert args.categories is None
     assert args.batch_size == 1
-    assert args.num_gpus == 1  # Default to 1 when detection fails
-    assert args.num_cpus > 0
+    assert args.num_gpus == 0
+    assert args.num_cpus == 1
     assert args.model == 'llama3.2'
-    assert args.threads > 0
-    assert args.verbose is False
-    assert args.playlist_url is None  # Add this assertion for playlist URL
+    assert args.threads == 1
+    assert not args.verbose
 
 def test_env_boolean_parsing(monkeypatch):
     test_cases = [

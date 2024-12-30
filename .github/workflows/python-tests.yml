@@ -27,6 +27,20 @@ jobs:
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
         
+    - name: Setup environment
+      run: |
+        cp .env.template .env
+        # Add test environment variables
+        cat > .env << EOL
+        PLAYLIST_URL=https://www.youtube.com/playlist?list=test
+        NUM_GPUS=0
+        NUM_CPUS=1
+        BATCH_SIZE=1
+        THREADS=1
+        MODEL=llama3.2
+        VERBOSE=false
+        EOL
+        
     - name: Run tests with pytest and coverage
       env:
         PYTHONPATH: ${{ github.workspace }}/src
@@ -43,4 +57,4 @@ jobs:
       with:
         file: ./coverage.xml
         fail_ci_if_error: true
-        verbose: true  # Add verbose flag for more detailed upload information 
+        verbose: true 
