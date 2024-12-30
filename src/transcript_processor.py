@@ -12,7 +12,7 @@ class LLMConfig(BaseModel):
     format: str = Field(default="json")
     num_thread: int = Field(default=4)
     num_ctx: int = Field(default=16384)
-    repeat_last_n: int = Field(default=32)
+    repeat_last_n: int = Field(default=2)
     num_gpu: int = Field(default=0)
 
 class TranscriptProcessor:
