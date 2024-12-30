@@ -48,23 +48,9 @@ jobs:
         python -m pytest
         
     - name: Generate Coverage Report
-      id: coverage
       run: |
         coverage report
         coverage html
-        # Extract coverage percentage and save to environment
-        COVERAGE=$(coverage report | grep TOTAL | awk '{print $4}' | sed 's/%//')
-        echo "COVERAGE=$COVERAGE" >> $GITHUB_ENV
-        
-    - name: Create Coverage Badge
-      uses: schneegans/dynamic-badges-action@v1.7.0
-      with:
-        auth: ${{ secrets.GIST_SECRET }}
-        gistID: # You'll need to create a gist and put its ID here
-        filename: coverage.json
-        label: coverage
-        message: ${{ env.COVERAGE }}%
-        color: brightgreen
         
     - name: Upload Coverage Report
       uses: actions/upload-artifact@v4

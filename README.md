@@ -1,7 +1,6 @@
 # YouTube Playlist Analyzer
 
-[![Build and Test](https://github.com/cmanaha/youtube-playlist-analyzer/actions/workflows/python-tests.yml/badge.svg)](https://github.com/cmanaha/youtube-playlist-analyzer/actions/workflows/python-tests.yml)
-[![Code Coverage Report](https://img.shields.io/badge/Code%20Coverage-Report-blue)](https://github.com/cmanaha/youtube-playlist-analyzer/actions/workflows/python-tests.yml)
+[![Tests](https://github.com/cmanaha/youtube-playlist-analyzer/actions/workflows/python-tests.yml/badge.svg?branch=main)](https://github.com/cmanaha/youtube-playlist-analyzer/actions/workflows/python-tests.yml)
 
 A powerful tool for analyzing YouTube playlists using AI to categorize and summarize video content. Perfect for quickly digesting large playlists and organizing videos by topic.
 
