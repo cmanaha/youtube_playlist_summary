@@ -1,99 +1,97 @@
-# YouTube Playlist Analyzer
+## EC2 Installation
 
-A tool for analyzing YouTube playlists using AI to categorize and summarize video content. Perfect for quickly digesting large playlists and organizing videos by topic.
+You can quickly set up this application on an Amazon EC2 instance using the provided installation script. Here's how:
 
-## Overview
+### Prerequisites
 
-This tool downloads YouTube playlist transcripts, uses LLMs to categorize and summarize videos, and generates a beautiful markdown report organized by categories. It supports concurrent processing, hardware acceleration, and flexible filtering options.
+1. An EC2 instance running Amazon Linux 2023
+   - Recommended instance type: t3.xlarge or better
+   - At least 20GB of storage for the model and application
+   - Security group with SSH access (port 22)
 
-## Features
-- 🤖 Advanced LLM Integration with Ollama
-- 📊 Ollama Used for Smart Video Categorization (by default using llama3.2)
-- 📝 Intelligent Video Summarization (by default using llama3.2)
-- 🎯 Flexible Category Filtering
-- 📈 Progress Tracking & Statistics
-- 🖥️ Hardware Acceleration Support
+### Quick Installation
 
+You can install the application using one of these methods:
 
-## Installation
+#### Method 1: Direct Installation (Recommended)
 
-```
-git clone https://github.com/yourusername/youtube-playlist-analyzer
-cd youtube-playlist-analyzer
-pip install -r requirements.txt
-```
+<pre>
+curl -sSL https://raw.githubusercontent.com/cmanaha/youtube_playlist_summary/main/scripts/install_ec2.sh | sudo bash
+</pre>
 
-Copy the .env.template to .env and configure your settings:
+#### Method 2: Manual Installation
 
-```
-cp .env.template .env
-```
+1. Connect to your EC2 instance:
+<pre>
+ssh -i your-key.pem ec2-user@your-ec2-instance
+</pre>
 
-## Usage
+2. Download and run the installation script:
+<pre>
+curl -O https://raw.githubusercontent.com/cmanaha/youtube_playlist_summary/main/scripts/install_ec2.sh
+chmod +x install_ec2.sh
+sudo ./install_ec2.sh
+</pre>
 
-Basic usage with a playlist URL:
+### Post-Installation
 
-```
-python src/main.py --url "https://youtube.com/playlist?list=..."
-```
+After successful installation:
 
-Advanced usage with filters and hardware acceleration:
+1. Navigate to the application directory:
+<pre>
+cd /opt/youtube_playlist_summary
+</pre>
 
-```
-python src/main.py --url "..." --categories "Security,AIML" --num-gpus 1 --batch-size 4
-```
+2. Activate the virtual environment:
+<pre>
+source venv/bin/activate
+</pre>
 
-## Configuration
+3. Configure the application by editing the .env file:
+<pre>
+nano .env
+</pre>
 
-The tool can be configured through command line arguments or environment variables:
+4. Run the application:
+<pre>
+python src/main.py
+</pre>
 
-| Parameter | Environment Variable | Description | Default |
-|-----------|---------------------|-------------|---------|
-| --url | PLAYLIST_URL | YouTube playlist URL | Required |
-| --videos | VIDEOS | Number of videos to process | All |
-| --categories | CATEGORIES | Categories to filter by | All |
-| --batch-size | BATCH_SIZE | Concurrent processing batch size | 1 |
-| --num-gpus | NUM_GPUS | Number of GPUs to use | 0 |
-| --num-cpus | NUM_CPUS | Number of CPU cores to use | 4 |
-| --model | MODEL | Ollama model to use | llama3.2 |
-| --threads | THREADS | Number of CPU threads for LLM | 4 |
-| --output | OUTPUT | Output file path | Auto-generated |
-| --verbose | VERBOSE | Show detailed progress | false |
+### Two-Stage Processing (for YouTube API Restrictions)
 
+Due to YouTube API restrictions on EC2 instances, it's recommended to use a two-stage process:
 
-## Output Format
+1. On your local machine, extract transcripts:
+<pre>
+python src/main.py --extract-transcripts transcripts.zip
+</pre>
 
-The generated markdown report includes:
-- Table of contents with category links
-- Videos organized by category
-- Thumbnails and direct links to videos
-- AI-generated two-sentence summaries
-- Video count per category
+2. Copy the transcripts to your EC2 instance:
+<pre>
+scp -i your-key.pem transcripts.zip ec2-user@your-ec2-instance:/opt/youtube_playlist_summary/
+</pre>
 
+3. On EC2, process the transcripts:
+<pre>
+python src/main.py --with-transcripts transcripts.zip
+</pre>
 
-## Development
+### Troubleshooting
 
-Run tests:
+- If the installation fails, check the error messages and ensure your instance has enough resources
+- Make sure your EC2 instance has internet access
+- The Llama model download might take several minutes depending on your internet connection
+- If you see YouTube API restrictions, use the two-stage process described above
 
-```
-pytest tests/
-```
+### Environment Configuration
 
-Code structure:
-- main.py: Entry point and orchestration
-- transcript_processor.py: AI processing logic
-- youtube_handler.py: YouTube API interaction
-- markdown_generator.py: Report generation
-- utils.py: Helper functions and system detection
+The installation creates a minimal .env file with these settings:
 
-## Author & License
+<pre>
+# Environment configuration
+PLAYLIST_URL=
+BATCH_SIZE=1
+MODEL=llama3.2
+</pre>
 
-Author: **Carlos Manzanedo Rueda** ([@cmanaha](https://github.com/cmanaha))
-License:  MIT License - See LICENSE file for details
-
-## Contributing
-
-Contributions are welcome! Please read CONTRIBUTING.md for guidelines.
-
-
-
+You can adjust these settings according to your needs. The PLAYLIST_URL must be set before running the application. 
