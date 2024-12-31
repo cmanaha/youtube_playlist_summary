@@ -40,11 +40,16 @@ class TranscriptProcessor:
         self.batch_size: int = max(1, batch_size)
         
         # Define valid categories
+
+
         self.valid_categories: Set[str] = {
             "Keynote", "Security", "GitOps", "AI & ML", "Sustainability",
-            "Scaling", "Scheduling", "Performance Engineering", "Observability", "Data & Analytics",
-            "HPC", "Developer Experience", "Linux Foundation", "Compute", "Infrastructure",
-         }
+            "Scaling", "Scheduling", "Performance Engineering", "Observability", 
+            "Analytics", "Databases", "Operations"
+            "HPC", "Developer Experience", "Compute",
+            "Storage", "Networking", "Serverless","Architecture"           
+        }
+
         self.filter_categories: Optional[Set[str]] = None
         
         # Add preselected categories storage
