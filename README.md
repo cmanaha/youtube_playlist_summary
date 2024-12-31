@@ -1,97 +1,174 @@
-## EC2 Installation
+# YouTube Playlist Summarizer
 
-You can quickly set up this application on an Amazon EC2 instance using the provided installation script. Here's how:
+A tool that uses AI to analyze and summarize YouTube playlists, creating well-organized markdown documents with categorized video summaries.
 
-### Prerequisites
+**Author:** Carlos Manzanedo Rueda ([@cmanaha](https://github.com/cmanaha))
 
-1. An EC2 instance running Amazon Linux 2023
-   - Recommended instance type: t3.xlarge or better
-   - At least 20GB of storage for the model and application
-   - Security group with SSH access (port 22)
 
-### Quick Installation
+## Overview
 
-You can install the application using one of these methods:
+This application processes YouTube playlists by downloading video transcripts, categorizing content using AI, and generating concise summaries. It's particularly useful for:
+- Conference playlists (like AWS re:Invent, KubeCon, Google Next)
+- Educational series
+- Technical tutorials
+- Product launches and keynotes
 
-#### Method 1: Direct Installation (Recommended)
+## Installation
 
+### Local Installation
+
+1. Clone the repository and install dependencies:
 <pre>
-curl -sSL https://raw.githubusercontent.com/cmanaha/youtube_playlist_summary/main/scripts/install_ec2.sh | sudo bash
+git clone https://github.com/cmanaha/youtube_playlist_summary.git
+cd youtube_playlist_summary
+pip install -r requirements.txt
 </pre>
 
-#### Method 2: Manual Installation
-
-1. Connect to your EC2 instance:
+2. Create a .env file from the template:
 <pre>
-ssh -i your-key.pem ec2-user@your-ec2-instance
+cp .env.template .env
 </pre>
 
-2. Download and run the installation script:
+3. Configure your environment variables (see Configuration section below)
+
+### EC2 Installation
+
+For EC2 deployment, use our installation script:
 <pre>
-curl -O https://raw.githubusercontent.com/cmanaha/youtube_playlist_summary/main/scripts/install_ec2.sh
-chmod +x install_ec2.sh
-sudo ./install_ec2.sh
+curl -sSL https://raw.githubusercontent.com/yourusername/youtube_playlist_summary/main/scripts/install_ec2.sh | sudo bash
 </pre>
 
-### Post-Installation
+## Configuration
 
-After successful installation:
+The application can be configured through environment variables or a .env file. Here's a comprehensive guide to the configuration options:
 
-1. Navigate to the application directory:
+### Model Selection
+
+The application supports both local and cloud-based AI models:
+
+#### Local Models (via Ollama)
+- `llama3.2` (default): Balanced performance and quality
+- `mistral`: Fast and efficient
+
+#### Cloud Models (via AWS Bedrock)
+- `claude`: Claude 3.5 Sonnet - Highest quality summaries
+- `claude-haiku`: Claude 3.5 Haiku - Fast with good quality
+- `nova`: Amazon Nova Lite - Efficient and cost-effective
+
+### Basic Usage
+
+1. Simple playlist analysis with default settings:
 <pre>
-cd /opt/youtube_playlist_summary
-</pre>
+# In your .env file:
+PLAYLIST_URL=https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID
+MODEL=llama3.2
 
-2. Activate the virtual environment:
-<pre>
-source venv/bin/activate
-</pre>
-
-3. Configure the application by editing the .env file:
-<pre>
-nano .env
-</pre>
-
-4. Run the application:
-<pre>
+# Run the application:
 python src/main.py
 </pre>
 
-### Two-Stage Processing (for YouTube API Restrictions)
+2. Advanced configuration example:
+<pre>
+PLAYLIST_URL=https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID
+MODEL=claude
+BATCH_SIZE=2
+CATEGORIES=Security,AI & ML
+VERBOSE=true
+NUM_CPUS=4
+</pre>
 
-Due to YouTube API restrictions on EC2 instances, it's recommended to use a two-stage process:
+### Working with AWS Bedrock
 
-1. On your local machine, extract transcripts:
+To use Bedrock models (claude, claude-haiku, nova), configure AWS credentials:
+
+<pre>
+AWS_DEFAULT_REGION=us-east-1
+AWS_PROFILE=default
+</pre>
+
+### Advanced Features
+
+#### Category Filtering
+
+Filter videos by specific categories:
+<pre>
+CATEGORIES=Security,AI & ML,GitOps
+</pre>
+
+
+
+#### Two-Stage Processing
+
+For environments with YouTube API restrictions, use the two-stage approach:
+
+1. Extract transcripts locally:
 <pre>
 python src/main.py --extract-transcripts transcripts.zip
 </pre>
 
-2. Copy the transcripts to your EC2 instance:
+2. Transfer and process on target machine:
 <pre>
+# Copy transcripts to target machine
 scp -i your-key.pem transcripts.zip ec2-user@your-ec2-instance:/opt/youtube_playlist_summary/
+
+# Process with your chosen model
+python src/main.py --with-transcripts transcripts.zip --model claude
 </pre>
 
-3. On EC2, process the transcripts:
+#### Batch Processing
+
+Control concurrent processing:
 <pre>
-python src/main.py --with-transcripts transcripts.zip
+BATCH_SIZE=2  # Process two videos simultaneously
+NUM_CPUS=4    # Utilize 4 CPU cores
+NUM_GPUS=1    # Use GPU acceleration (for Ollama models)
+THREADS=4     # Configure LLM threading
 </pre>
 
-### Troubleshooting
+### Output Customization
 
-- If the installation fails, check the error messages and ensure your instance has enough resources
-- Make sure your EC2 instance has internet access
-- The Llama model download might take several minutes depending on your internet connection
-- If you see YouTube API restrictions, use the two-stage process described above
-
-### Environment Configuration
-
-The installation creates a minimal .env file with these settings:
-
+By default, summaries are saved in the `output/` directory. Customize the output:
 <pre>
-# Environment configuration
-PLAYLIST_URL=
-BATCH_SIZE=1
-MODEL=llama3.2
+OUTPUT=custom/path/summary.md
 </pre>
 
-You can adjust these settings according to your needs. The PLAYLIST_URL must be set before running the application. 
+The generated markdown includes:
+- Table of contents with category links
+- Videos grouped by category
+- Thumbnails and direct links
+- Concise two-sentence summaries
+
+## Model Comparison Guide
+
+Choose your model based on your needs:
+
+**Local Processing (Ollama)**
+- `llama3.2`: Best for general use, good balance of speed and quality
+- `mistral`: Faster alternative, suitable for larger playlists
+
+**Cloud Processing (Bedrock)**
+- `claude`: Best for technical content and accurate summaries
+- `claude-haiku`: Good for quick processing of large playlists
+- `nova`: Balanced option for general content
+
+## Troubleshooting
+
+Common issues and solutions:
+
+1. YouTube API restrictions:
+   - Use the two-stage processing approach
+   - Extract transcripts locally, then process on target machine
+
+2. Model availability:
+   - Ensure Ollama is installed for local models
+   - Verify AWS credentials for Bedrock models
+
+
+
+## Contributing
+
+Contributions are welcome! Please check our contributing guidelines and feel free to submit pull requests.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details. 
