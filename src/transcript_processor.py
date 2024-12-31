@@ -46,25 +46,33 @@ class TranscriptProcessor:
         
         # Define valid categories
         self.valid_categories: Set[str] = {
-            "Keynote", "Security", "GitOps", "AIML", "Sustainability",
-            "Scaling", "Performance", "Observability", "Data & Analytics",
-            "HPC", "Developer Experience", "Linux Foundation"
-        }
+            "Keynote", "Security", "GitOps", "AI & ML", "Sustainability",
+            "Scaling", "Scheduling", "Performance Engineering", "Observability", "Data & Analytics",
+            "HPC", "Developer Experience", "Linux Foundation", "Compute", "Infrastructure",
+         }
         self.filter_categories: Optional[Set[str]] = None
+        
+        # Add preselected categories storage
+        self.preselected_categories: Set[str] = set()
         
         # Prompt template for categorization
         self.category_prompt = PromptTemplate(
             template="""Based on the following video title and transcript, 
             choose the most appropriate category. Please do not make the category
             too specific, it should be a broad category. 
-            An example of categories that are good are: {categories}
+            
+            Previously used categories: {preselected_categories}
+            If the content is similar to any of the previously used categories, 
+            please reuse that category for better grouping.
+            
+            If no previous categories match, you can choose from these examples: {categories}
             
             Title: {title}
             Transcript: {transcript}
             
             Respond ONLY with a JSON object in this format:
             {{"category": "chosen_category"}}""",
-            input_variables=["categories", "title", "transcript"]
+            input_variables=["preselected_categories", "categories", "title", "transcript"]
         )
         
         # Prompt template for summarization
@@ -133,9 +141,13 @@ class TranscriptProcessor:
     def _get_category(self, title: str, transcript: str) -> str:
         """Get category for the video."""
         try:
+            # Format preselected categories for the prompt
+            preselected_cats = ", ".join(sorted(self.preselected_categories)) if self.preselected_categories else "Uncategorized"
+            
             # Invoke LLM for categorization
             response = self.llm.invoke(
                 self.category_prompt.format(
+                    preselected_categories=preselected_cats,
                     categories=", ".join(sorted(self.valid_categories)),
                     title=title,
                     transcript=transcript
@@ -151,6 +163,8 @@ class TranscriptProcessor:
                 normalized_category = self._normalize_category(category)
                 for valid_category in self.valid_categories:
                     if self._normalize_category(valid_category) == normalized_category:
+                        # Add to preselected categories for future use
+                        self.preselected_categories.add(valid_category)
                         return valid_category
             
             return category

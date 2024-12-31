@@ -40,7 +40,9 @@ class MarkdownGenerator:
         
         # Add each category and its videos
         for category in sorted(self.categories.keys()):
-            lines.append(f"\n## {category} ({len(self.categories[category])} videos)")
+            category_link = category.lower().replace(' ', '-')
+            # Add the HTML anchor before the category heading
+            lines.append(f"\n<h2 id='{category_link}'>{category} ({len(self.categories[category])} videos)</h2>")
             
             for video in self.categories[category]:
                 lines.extend([
