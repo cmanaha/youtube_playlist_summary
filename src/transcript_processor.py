@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from langchain_ollama import OllamaLLM
 from langchain.prompts import PromptTemplate
 import json
+from llm_provider import LLMConfig, LLMProvider
 
 class LLMConfig(BaseModel):
     """Configuration for the LLM."""
@@ -41,7 +42,9 @@ class TranscriptProcessor:
         if num_cpus > 0:
             llm_config.num_thread = num_cpus
         
-        self.llm: OllamaLLM = OllamaLLM(**llm_config.model_dump())
+        # Create LLM instance using provider
+        self.llm = LLMProvider.create_llm(llm_config)
+        
         self.batch_size: int = max(1, batch_size)
         
         # Define valid categories
