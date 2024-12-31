@@ -4,17 +4,7 @@ from pydantic import BaseModel, Field
 from langchain_ollama import OllamaLLM
 from langchain.prompts import PromptTemplate
 import json
-from llm_provider import LLMConfig, LLMProvider
-
-class LLMConfig(BaseModel):
-    """Configuration for the LLM."""
-    model: str = Field(default="llama3.2")
-    temperature: float = Field(default=0.7)
-    format: str = Field(default="json")
-    num_thread: int = Field(default=4)
-    num_ctx: int = Field(default=16384)
-    repeat_last_n: int = Field(default=2)
-    num_gpu: int = Field(default=0)
+from llm_provider import LLMConfig, LLMProvider, RetryConfig
 
 class TranscriptProcessor:
     def __init__(
@@ -28,7 +18,9 @@ class TranscriptProcessor:
         # Configure LLM settings
         llm_config = LLMConfig(
             model=model,
-            num_thread=num_threads
+            num_thread=num_threads,
+            num_gpu=num_gpus,
+            retry=RetryConfig()  # Add retry configuration
         )
         
         # Store model name for testing
@@ -80,7 +72,8 @@ class TranscriptProcessor:
         
         # Prompt template for summarization
         self.summary_prompt = PromptTemplate(
-            template="""Provide a concise two-sentence summary of this video content.
+            template="""Provide a concise one paragraph with 3 sentences at least. Use an abstract style as the
+            one you would propose for a conference talk with the summary of this video content.
             
             Title: {title}
             Transcript: {transcript}
