@@ -66,28 +66,6 @@ python src/main.py \
   --verbose
 </pre>
 
-Available categories:
-- ai & ml
-- security
-- databases
-- serverless
-- containers
-- networking
-- storage
-- compute
-- analytics
-- architecture
-- devops
-- mobile
-- web
-- iot
-- blockchain
-- quantum
-- gaming
-- media
-- enterprise
-- startup
-- industry
 
 ## Output
 
