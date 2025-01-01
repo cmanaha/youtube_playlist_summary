@@ -1,4 +1,16 @@
-from typing import Dict, Any, Optional
+"""
+YouTube Playlist Summary
+Copyright (c) 2024 Carlos Manzanedo Rueda (@cmanaha)
+
+Licensed under the MIT License (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://opensource.org/licenses/MIT
+"""
+
+import json
+from typing import Optional, Dict, List
 from abc import ABC, abstractmethod
 from langchain_ollama import OllamaLLM
 import boto3

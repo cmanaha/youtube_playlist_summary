@@ -1,3 +1,6 @@
+# © 2024 Carlos Manzanedo Rueda
+# MIT License
+
 import pytest
 from unittest.mock import patch
 import os
@@ -19,7 +22,6 @@ class MockSystemInfo:
     @staticmethod
     def get_cpu_count():
         return 4
-
 
 @patch('src.utils.SystemInfo', MockSystemInfo)
 @patch('src.utils.SystemInfo.get_cpu_count', return_value=4)

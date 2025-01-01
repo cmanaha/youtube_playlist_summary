@@ -1,3 +1,7 @@
+# © 2024 Carlos Manzanedo Rueda
+# © 2024 Carlos Manzanedo Rueda
+# MIT License
+
 import pytest
 from src.youtube_handler import YoutubeHandler
 from unittest.mock import patch, MagicMock

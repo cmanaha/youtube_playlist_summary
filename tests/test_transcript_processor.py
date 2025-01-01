@@ -1,3 +1,6 @@
+# © 2024 Carlos Manzanedo Rueda
+# MIT License
+
 import pytest
 from typing import Optional
 from transcript_processor import TranscriptProcessor
