@@ -19,3 +19,9 @@ disable = ["C0111"]  # missing-docstring
 line-length = 100
 target-version = ['py39']
 include = '\.pyi?$' 
+
+[tool.pytest]
+pythonpath = "."
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "--cov=src --cov-report=xml --cov-report=term" 

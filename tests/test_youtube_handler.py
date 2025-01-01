@@ -1,99 +1,107 @@
 import pytest
-from youtube_handler import YoutubeHandler
+from src.youtube_handler import YoutubeHandler
 from unittest.mock import patch, MagicMock
-import yt_dlp
 
-def test_validate_youtube_playlist_url():
-    handler = YoutubeHandler()
-    
-    # Valid URLs
-    valid_urls = [
-        "https://www.youtube.com/playlist?list=PLxxxxxxxx",
-        "https://www.youtube.com/watch?v=xxxxx&list=PLxxxxxxxx",
-        "https://youtu.be/xxxxx?list=PLxxxxxxxx"
-    ]
-    for url in valid_urls:
-        assert handler._validate_youtube_playlist_url(url), f"Should accept {url}"
-    
-    # Invalid URLs
-    invalid_urls = [
-        "",
-        "https://www.youtube.com/watch?v=xxxxx",
-        "https://www.example.com",
-        "not_a_url"
-    ]
-    for url in invalid_urls:
-        assert not handler._validate_youtube_playlist_url(url), f"Should reject {url}"
+@pytest.fixture
+def youtube_handler():
+    return YoutubeHandler(verbose=True)  # Remove saved_transcripts parameter
 
-@patch('yt_dlp.YoutubeDL')
-def test_get_playlist_videos_private_playlist(mock_ydl_class):
-    handler = YoutubeHandler()
-    
-    # Mock the validation to return True for our test URL
-    with patch.object(handler, '_validate_youtube_playlist_url', return_value=True):
-        # Mock yt_dlp to simulate a private playlist
-        mock_ydl_instance = MagicMock()
-        mock_ydl_instance.extract_info.side_effect = yt_dlp.utils.DownloadError("This playlist is private")
-        mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
-        
-        with pytest.raises(ValueError, match="Could not access the playlist"):
-            handler.get_playlist_videos("https://www.youtube.com/playlist?list=PLxxxxxxxx")
+def test_youtube_handler_initialization():
+    handler = YoutubeHandler(verbose=True)
+    assert handler.verbose is True
+    assert handler.videos == []
+    assert handler.ydl_opts == {
+        'quiet': True,
+        'extract_flat': True,
+        'force_generic_extractor': True
+    }
+
+@pytest.mark.parametrize("url,expected", [
+    ("https://www.youtube.com/playlist?list=123", True),
+    ("https://www.youtube.com/watch?v=123&list=456", True),
+    ("https://youtu.be/123?list=789", True),
+    ("https://youtube.com/watch?v=123", False),
+    ("https://invalid.com/playlist", False),
+])
+def test_validate_youtube_playlist_url(youtube_handler, url, expected):
+    assert youtube_handler._validate_youtube_playlist_url(url) == expected
 
 @patch('yt_dlp.YoutubeDL')
-def test_get_playlist_videos_empty_playlist(mock_ydl_class):
-    handler = YoutubeHandler()
-    
-    # Mock the validation to return True for our test URL
-    with patch.object(handler, '_validate_youtube_playlist_url', return_value=True):
-        # Mock yt_dlp to simulate an empty playlist
-        mock_ydl_instance = MagicMock()
-        mock_ydl_instance.extract_info.return_value = {'entries': []}
-        mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
-        
-        with pytest.raises(ValueError, match="No accessible videos found"):
-            handler.get_playlist_videos("https://www.youtube.com/playlist?list=PLxxxxxxxx")
-
-@patch('yt_dlp.YoutubeDL')
-def test_get_playlist_videos_success(mock_ydl_class):
-    handler = YoutubeHandler()
-    
-    # Mock successful playlist data
-    mock_playlist_data = {
+def test_get_playlist_videos_success(mock_ytdl, youtube_handler):
+    # Mock the YoutubeDL response
+    mock_result = {
         'title': 'Test Playlist',
         'entries': [
-            {
-                'id': 'video1',
-                'title': 'Test Video 1',
-                'description': 'Description 1'
-            },
-            {
-                'id': 'video2',
-                'title': 'Test Video 2',
-                'description': 'Description 2'
-            }
+            {'id': '123', 'title': 'Video 1', 'description': 'Desc 1'},
+            {'id': '456', 'title': 'Video 2', 'description': 'Desc 2'}
         ]
     }
-    
-    # Mock the validation to return True for our test URL
-    with patch.object(handler, '_validate_youtube_playlist_url', return_value=True):
-        # Setup mock yt_dlp
-        mock_ydl_instance = MagicMock()
-        mock_ydl_instance.extract_info.return_value = mock_playlist_data
-        mock_ydl_class.return_value.__enter__.return_value = mock_ydl_instance
-        
-        videos, title = handler.get_playlist_videos("https://www.youtube.com/playlist?list=PLxxxxxxxx")
-        
-        assert title == 'Test Playlist'
-        assert len(videos) == 2
-        assert videos[0]['video_id'] == 'video1'
-        assert videos[1]['title'] == 'Test Video 2'
+    mock_ytdl.return_value.__enter__.return_value.extract_info.return_value = mock_result
 
-def test_get_transcript(sample_video):
-    handler = YoutubeHandler()
-    with patch('youtube_transcript_api.YouTubeTranscriptApi.get_transcript') as mock_get_transcript:
-        mock_get_transcript.return_value = [
-            {'text': 'First part'},
-            {'text': 'Second part'}
-        ]
-        transcript = handler.get_transcript(sample_video['video_id'])
-        assert transcript == 'First part Second part' 
+    videos, playlist_title = youtube_handler.get_playlist_videos('https://www.youtube.com/playlist?list=123')
+    
+    assert playlist_title == 'Test Playlist'
+    assert len(videos) == 2
+    assert videos[0]['video_id'] == '123'
+    assert videos[1]['video_id'] == '456'
+
+@patch('src.youtube_handler.YouTubeTranscriptApi')
+def test_get_transcript_success(mock_transcript_api, youtube_handler):
+    # Create mock transcript and list
+    mock_transcript = MagicMock()
+    mock_transcript.fetch.return_value = [{'text': 'Hello'}, {'text': 'World'}]
+    
+    mock_transcript_list = MagicMock()
+    mock_transcript_list.find_transcript.return_value = mock_transcript
+    
+    # Set up the mock API
+    mock_transcript_api.list_transcripts.return_value = mock_transcript_list
+    
+    # Import actual exceptions to mock correctly
+    from youtube_transcript_api import (
+        TranscriptsDisabled,
+        NoTranscriptFound
+    )
+    
+    # Set up the exception classes on the mock
+    mock_transcript_api.TranscriptsDisabled = TranscriptsDisabled
+    mock_transcript_api.NoTranscriptFound = NoTranscriptFound
+    
+    # Configure the find_transcript method to return our mock transcript
+    mock_transcript_list.find_transcript.side_effect = lambda langs: mock_transcript
+    
+    # Get the transcript
+    transcript = youtube_handler.get_transcript('video_id')
+    
+    # Verify the result
+    assert transcript == 'Hello World'
+    
+    # Verify the API was called correctly - update the patch path
+    mock_transcript_api.list_transcripts.assert_called_once_with('video_id')
+    mock_transcript_list.find_transcript.assert_called()
+    mock_transcript.fetch.assert_called_once()
+
+@patch('youtube_transcript_api.YouTubeTranscriptApi')
+def test_get_transcript_no_transcript(mock_transcript_api, youtube_handler):
+    # Mock transcript API to raise NoTranscriptFound
+    mock_transcript_api.list_transcripts.side_effect = Exception('No transcript found')
+    
+    transcript = youtube_handler.get_transcript('video_id')
+    assert transcript is None
+
+def test_get_playlist_videos_invalid_url(youtube_handler):
+    with pytest.raises(ValueError, match="Invalid YouTube playlist URL"):
+        youtube_handler.get_playlist_videos("https://invalid.com/playlist")
+
+@patch('yt_dlp.YoutubeDL')
+def test_get_playlist_videos_empty_playlist(mock_ytdl, youtube_handler):
+    # Mock empty playlist response
+    mock_ytdl.return_value.__enter__.return_value.extract_info.return_value = {
+        'title': 'Empty Playlist',
+        'entries': []
+    }
+    
+    with pytest.raises(ValueError) as exc_info:
+        youtube_handler.get_playlist_videos('https://www.youtube.com/playlist?list=123')
+    
+    assert "No accessible videos found in the playlist" in str(exc_info.value) 

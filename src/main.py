@@ -11,10 +11,7 @@ from utils import (
     save_markdown, 
     print_configuration,
     SystemInfo,
-    console,
-    load_transcripts,
-    save_transcripts,
-    TranscriptData
+    console
 )
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
@@ -84,10 +81,6 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument('--verbose', action='store_true',
         help='Show detailed progress information',
         default=env_verbose)
-    parser.add_argument('--extract-transcripts', type=str,
-        help='Extract transcripts and save to specified zip file')
-    parser.add_argument('--with-transcripts', type=str,
-        help='Use previously extracted transcripts from zip file')
     args = parser.parse_args()
     
     # If playlist_url is not provided in command line, use environment variable
@@ -245,57 +238,11 @@ def main():
     # Print configuration if verbose mode is enabled
     print_configuration(args, playlist_url)
     
-    # Load saved transcripts if provided
-    saved_transcripts = None
-    if args.with_transcripts:
-        saved_transcripts = load_transcripts(args.with_transcripts)
-        print(f"\nLoaded {len(saved_transcripts)} transcripts from {args.with_transcripts}")
-    
     # Setup components
-    youtube_handler = YoutubeHandler(verbose=args.verbose, saved_transcripts=saved_transcripts)
+    youtube_handler = YoutubeHandler(verbose=args.verbose)
     
     # Get playlist information
     videos, playlist_title = youtube_handler.get_playlist_videos(playlist_url)
-    
-    # If we're just extracting transcripts, do that and exit
-    if args.extract_transcripts:
-        transcripts = {}
-        total_videos = len(videos)
-        
-        # Create progress bar for transcript extraction
-        with create_progress() as progress:
-            task = progress.add_task(
-                "[cyan]Extracting transcripts...",
-                total=total_videos
-            )
-            
-            for video in videos:
-                if args.verbose:
-                    console.log(f"Processing transcript for: {video['title']}")
-                
-                transcript = youtube_handler.get_transcript(video['video_id'])
-                if transcript:
-                    transcripts[video['video_id']] = TranscriptData(
-                        video_id=video['video_id'],
-                        title=video['title'],
-                        url=video['url'],
-                        description=video['description'],
-                        transcript=transcript,
-                        timestamp=datetime.now()
-                    )
-                    if args.verbose:
-                        console.log(f"[green]✓[/green] Transcript extracted: {video['title']}")
-                else:
-                    if args.verbose:
-                        console.log(f"[red]✗[/red] No transcript available: {video['title']}")
-                
-                progress.update(task, advance=1)
-        
-        # Save transcripts after collection
-        save_transcripts(transcripts, args.extract_transcripts)
-        console.print(f"\n[green]Successfully saved[/green] {len(transcripts)} transcripts to {args.extract_transcripts}")
-        console.print(f"[yellow]Skipped[/yellow] {total_videos - len(transcripts)} videos with no available transcripts")
-        return
     
     # Set category filter if provided
     try:

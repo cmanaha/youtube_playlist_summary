@@ -11,7 +11,6 @@ from contextlib import contextmanager
 import io
 from contextlib import nullcontext
 import requests
-from utils import TranscriptData
 
 def retry_on_exception(retries=3, delay=3):
     def decorator(func):
@@ -51,10 +50,9 @@ def suppress_stdout_stderr():
         null_device.close()
 
 class YoutubeHandler:
-    def __init__(self, verbose: bool = False, saved_transcripts: Optional[Dict[str, TranscriptData]] = None):
+    def __init__(self, verbose: bool = False):
         self.verbose = verbose
         self.videos = []
-        self.saved_transcripts = saved_transcripts or {}
         self.ydl_opts = {
             'quiet': True,
             'extract_flat': True,
@@ -142,14 +140,7 @@ class YoutubeHandler:
     
     @retry_on_exception(retries=3, delay=5)
     def get_transcript(self, video_id) -> Optional[str]:
-        """Get transcript for a video, either from saved data or YouTube."""
-        # Check if we have this transcript saved
-        if video_id in self.saved_transcripts:
-            if self.verbose:
-                print(f"Using saved transcript for video {video_id}")
-            return self.saved_transcripts[video_id].transcript
-            
-        # If not saved, proceed with YouTube API call
+        """Get transcript for a video from YouTube."""
         try:
             # First try to get available transcript languages
             transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)

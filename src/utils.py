@@ -21,8 +21,6 @@ import platform
 import multiprocessing
 import subprocess
 from shutil import which
-import zipfile
-import json
 import pickle
 from dataclasses import dataclass
 from typing import Dict, Optional
@@ -294,50 +292,3 @@ class SystemInfo:
             console.log(f"• Number of threads: {settings['num_threads']}")
         
         return settings 
-
-@dataclass
-class TranscriptData:
-    """Store transcript data and metadata for a video."""
-    video_id: str
-    title: str
-    url: str
-    description: str
-    transcript: Optional[str]
-    timestamp: datetime
-    
-    def to_dict(self) -> dict:
-        """Convert to dictionary for serialization."""
-        return {
-            'video_id': self.video_id,
-            'title': self.title,
-            'url': self.url,
-            'description': self.description,
-            'transcript': self.transcript,
-            'timestamp': self.timestamp.isoformat()
-        }
-    
-    @classmethod
-    def from_dict(cls, data: dict) -> 'TranscriptData':
-        """Create from dictionary."""
-        data['timestamp'] = datetime.fromisoformat(data['timestamp'])
-        return cls(**data)
-
-def save_transcripts(transcripts: Dict[str, TranscriptData], output_path: str):
-    """Save transcripts and metadata to a zip file."""
-    with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-        # Save each transcript as a separate JSON file
-        for video_id, data in transcripts.items():
-            json_data = json.dumps(data.to_dict(), indent=2)
-            zf.writestr(f'transcripts/{video_id}.json', json_data)
-
-def load_transcripts(zip_path: str) -> Dict[str, TranscriptData]:
-    """Load transcripts and metadata from a zip file."""
-    transcripts = {}
-    with zipfile.ZipFile(zip_path, 'r') as zf:
-        for filename in zf.namelist():
-            if filename.startswith('transcripts/') and filename.endswith('.json'):
-                with zf.open(filename) as f:
-                    data = json.load(f)
-                    transcript_data = TranscriptData.from_dict(data)
-                    transcripts[transcript_data.video_id] = transcript_data
-    return transcripts 
