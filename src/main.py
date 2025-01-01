@@ -1,3 +1,14 @@
+"""
+YouTube Playlist Summary
+Copyright (c) 2024 Carlos Manzanedo Rueda (@cmanaha)
+
+Licensed under the MIT License (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://opensource.org/licenses/MIT
+"""
+
 import os
 import argparse
 from dotenv import load_dotenv
@@ -240,25 +251,25 @@ def main():
     
     # Setup components
     youtube_handler = YoutubeHandler(verbose=args.verbose)
-    transcript_processor = TranscriptProcessor(
-        batch_size=args.batch_size,
-        num_gpus=args.num_gpus,
-        num_cpus=args.num_cpus,
-        model=args.model,
-        num_threads=args.threads
-    )
+    
+    # Get playlist information
+    videos, playlist_title = youtube_handler.get_playlist_videos(playlist_url)
     
     # Set category filter if provided
     try:
+        transcript_processor = TranscriptProcessor(
+            batch_size=args.batch_size,
+            num_gpus=args.num_gpus,
+            num_cpus=args.num_cpus,
+            model=args.model,
+            num_threads=args.threads
+        )
         transcript_processor.set_filter_categories(args.categories)
         if args.categories:
             print(f"\nFiltering videos by categories: {args.categories}")
     except ValueError as e:
         print(f"\nError: {str(e)}")
         return
-    
-    # Get playlist information
-    videos, playlist_title = youtube_handler.get_playlist_videos(playlist_url)
     
     # Initialize markdown generator with playlist title
     markdown_generator = MarkdownGenerator(playlist_title)

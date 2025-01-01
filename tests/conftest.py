@@ -6,10 +6,11 @@ import os
 import sys
 from pathlib import Path
 
-# Add src directory to Python path
-src_path = str(Path(__file__).parent.parent / 'src')
-if src_path not in sys.path:
-    sys.path.insert(0, src_path)
+# Get the project root directory
+project_root = str(Path(__file__).parent.parent)
+
+# Add the project root directory to Python path
+sys.path.insert(0, project_root)
 
 @pytest.fixture
 def youtube_handler():

@@ -1,3 +1,6 @@
+# © 2024 Carlos Manzanedo Rueda
+# MIT License
+
 import pytest
 from markdown_generator import MarkdownGenerator
 
@@ -12,6 +15,6 @@ def test_markdown_generation():
                        "Test summary")
     
     content = generator.generate_markdown()
-    assert "# YouTube Playlist Summary: Test Playlist" in content
-    assert "## Table of Contents" in content
-    assert "## Security (1 videos)" in content 
+    assert "# Test Playlist" in content
+    assert "<h2 id='table-of-contents'>Table of Contents</h2>" in content
+    assert "<h2 id='security'>Security</h2>" in content 

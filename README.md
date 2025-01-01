@@ -1,99 +1,174 @@
-# YouTube Playlist Analyzer
+# YouTube Playlist Summarizer
 
-A tool for analyzing YouTube playlists using AI to categorize and summarize video content. Perfect for quickly digesting large playlists and organizing videos by topic.
+A tool that uses AI to analyze and summarize YouTube playlists, creating well-organized markdown documents with categorized video summaries.
+
+**Author:** Carlos Manzanedo Rueda ([@cmanaha](https://github.com/cmanaha))
+
 
 ## Overview
 
-This tool downloads YouTube playlist transcripts, uses LLMs to categorize and summarize videos, and generates a beautiful markdown report organized by categories. It supports concurrent processing, hardware acceleration, and flexible filtering options.
-
-## Features
-- 🤖 Advanced LLM Integration with Ollama
-- 📊 Ollama Used for Smart Video Categorization (by default using llama3.2)
-- 📝 Intelligent Video Summarization (by default using llama3.2)
-- 🎯 Flexible Category Filtering
-- 📈 Progress Tracking & Statistics
-- 🖥️ Hardware Acceleration Support
-
+This application processes YouTube playlists by downloading video transcripts, categorizing content using AI, and generating concise summaries. It's particularly useful for:
+- Conference playlists (like AWS re:Invent, KubeCon, Google Next)
+- Educational series
+- Technical tutorials
+- Product launches and keynotes
 
 ## Installation
 
-```
-git clone https://github.com/yourusername/youtube-playlist-analyzer
-cd youtube-playlist-analyzer
+### Local Installation
+
+1. Clone the repository and install dependencies:
+<pre>
+git clone https://github.com/cmanaha/youtube_playlist_summary.git
+cd youtube_playlist_summary
 pip install -r requirements.txt
-```
+</pre>
 
-Copy the .env.template to .env and configure your settings:
-
-```
+2. Create a .env file from the template:
+<pre>
 cp .env.template .env
-```
+</pre>
 
-## Usage
+3. Configure your environment variables (see Configuration section below)
 
-Basic usage with a playlist URL:
+### EC2 Installation
 
-```
-python src/main.py --url "https://youtube.com/playlist?list=..."
-```
-
-Advanced usage with filters and hardware acceleration:
-
-```
-python src/main.py --url "..." --categories "Security,AIML" --num-gpus 1 --batch-size 4
-```
+For EC2 deployment, use our installation script:
+<pre>
+curl -sSL https://raw.githubusercontent.com/yourusername/youtube_playlist_summary/main/scripts/install_ec2.sh | sudo bash
+</pre>
 
 ## Configuration
 
-The tool can be configured through command line arguments or environment variables:
+The application can be configured through environment variables or a .env file. Here's a comprehensive guide to the configuration options:
 
-| Parameter | Environment Variable | Description | Default |
-|-----------|---------------------|-------------|---------|
-| --url | PLAYLIST_URL | YouTube playlist URL | Required |
-| --videos | VIDEOS | Number of videos to process | All |
-| --categories | CATEGORIES | Categories to filter by | All |
-| --batch-size | BATCH_SIZE | Concurrent processing batch size | 1 |
-| --num-gpus | NUM_GPUS | Number of GPUs to use | 0 |
-| --num-cpus | NUM_CPUS | Number of CPU cores to use | 4 |
-| --model | MODEL | Ollama model to use | llama3.2 |
-| --threads | THREADS | Number of CPU threads for LLM | 4 |
-| --output | OUTPUT | Output file path | Auto-generated |
-| --verbose | VERBOSE | Show detailed progress | false |
+### Model Selection
+
+The application supports both local and cloud-based AI models:
+
+#### Local Models (via Ollama)
+- `llama3.2` (default): Balanced performance and quality
+- `mistral`: Fast and efficient
+
+#### Cloud Models (via AWS Bedrock)
+- `claude`: Claude 3.5 Sonnet - Highest quality summaries
+- `claude-haiku`: Claude 3.5 Haiku - Fast with good quality
+- `nova`: Amazon Nova Lite - Efficient and cost-effective
+
+### Basic Usage
+
+1. Simple playlist analysis with default settings:
+<pre>
+# In your .env file:
+PLAYLIST_URL=https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID
+MODEL=llama3.2
+
+# Run the application:
+python src/main.py
+</pre>
+
+2. Advanced configuration example:
+<pre>
+PLAYLIST_URL=https://www.youtube.com/playlist?list=YOUR_PLAYLIST_ID
+MODEL=claude
+BATCH_SIZE=2
+CATEGORIES=Security,AI & ML
+VERBOSE=true
+NUM_CPUS=4
+</pre>
+
+### Working with AWS Bedrock
+
+To use Bedrock models (claude, claude-haiku, nova), configure AWS credentials:
+
+<pre>
+AWS_DEFAULT_REGION=us-east-1
+AWS_PROFILE=default
+</pre>
+
+### Advanced Features
+
+#### Category Filtering
+
+Filter videos by specific categories:
+<pre>
+CATEGORIES=Security,AI & ML,GitOps
+</pre>
 
 
-## Output Format
 
-The generated markdown report includes:
+#### Two-Stage Processing
+
+For environments with YouTube API restrictions, use the two-stage approach:
+
+1. Extract transcripts locally:
+<pre>
+python src/main.py --extract-transcripts transcripts.zip
+</pre>
+
+2. Transfer and process on target machine:
+<pre>
+# Copy transcripts to target machine
+scp -i your-key.pem transcripts.zip ec2-user@your-ec2-instance:/opt/youtube_playlist_summary/
+
+# Process with your chosen model
+python src/main.py --with-transcripts transcripts.zip --model claude
+</pre>
+
+#### Batch Processing
+
+Control concurrent processing:
+<pre>
+BATCH_SIZE=2  # Process two videos simultaneously
+NUM_CPUS=4    # Utilize 4 CPU cores
+NUM_GPUS=1    # Use GPU acceleration (for Ollama models)
+THREADS=4     # Configure LLM threading
+</pre>
+
+### Output Customization
+
+By default, summaries are saved in the `output/` directory. Customize the output:
+<pre>
+OUTPUT=custom/path/summary.md
+</pre>
+
+The generated markdown includes:
 - Table of contents with category links
-- Videos organized by category
-- Thumbnails and direct links to videos
-- AI-generated two-sentence summaries
-- Video count per category
+- Videos grouped by category
+- Thumbnails and direct links
+- Concise two-sentence summaries
+
+## Model Comparison Guide
+
+Choose your model based on your needs:
+
+**Local Processing (Ollama)**
+- `llama3.2`: Best for general use, good balance of speed and quality
+- `mistral`: Faster alternative, suitable for larger playlists
+
+**Cloud Processing (Bedrock)**
+- `claude`: Best for technical content and accurate summaries
+- `claude-haiku`: Good for quick processing of large playlists
+- `nova`: Balanced option for general content
+
+## Troubleshooting
+
+Common issues and solutions:
+
+1. YouTube API restrictions:
+   - Use the two-stage processing approach
+   - Extract transcripts locally, then process on target machine
+
+2. Model availability:
+   - Ensure Ollama is installed for local models
+   - Verify AWS credentials for Bedrock models
 
 
-## Development
-
-Run tests:
-
-```
-pytest tests/
-```
-
-Code structure:
-- main.py: Entry point and orchestration
-- transcript_processor.py: AI processing logic
-- youtube_handler.py: YouTube API interaction
-- markdown_generator.py: Report generation
-- utils.py: Helper functions and system detection
-
-## Author & License
-
-Author: **Carlos Manzanedo Rueda** ([@cmanaha](https://github.com/cmanaha))
-License:  MIT License - See LICENSE file for details
 
 ## Contributing
 
-Contributions are welcome! Please read CONTRIBUTING.md for guidelines.
+Contributions are welcome! Please check our contributing guidelines and feel free to submit pull requests.
 
+## License
 
-
+This project is licensed under the MIT License - see the LICENSE file for details. 

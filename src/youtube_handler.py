@@ -1,5 +1,16 @@
+"""
+YouTube Playlist Summary
+Copyright (c) 2024 Carlos Manzanedo Rueda (@cmanaha)
+
+Licensed under the MIT License (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://opensource.org/licenses/MIT
+"""
+
 import yt_dlp
-from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 import time
 from typing import List, Dict, Optional
 from functools import wraps
@@ -10,6 +21,7 @@ import os
 from contextlib import contextmanager
 import io
 from contextlib import nullcontext
+import requests
 
 def retry_on_exception(retries=3, delay=3):
     def decorator(func):
@@ -137,12 +149,52 @@ class YoutubeHandler:
             'description': entry.get('description', '')
         }
     
-    @retry_on_exception(retries=3, delay=2)
+    @retry_on_exception(retries=3, delay=5)
     def get_transcript(self, video_id) -> Optional[str]:
-        """Get transcript for a video."""
+        """Get transcript for a video from YouTube."""
         try:
-            transcript = YouTubeTranscriptApi.get_transcript(video_id)
-            return ' '.join([entry['text'] for entry in transcript])
+            # First try to get available transcript languages
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            
+            # Try to get English transcript first
+            try:
+                transcript = transcript_list.find_transcript(['en'])
+            except NoTranscriptFound:
+                # If no English transcript, try to get any transcript and translate it
+                try:
+                    transcript = transcript_list.find_transcript(['en-US', 'en-GB'])
+                except NoTranscriptFound:
+                    # Get any available transcript and translate to English
+                    transcript = transcript_list.find_manually_created_transcript()
+                    transcript = transcript.translate('en')
+
+            # Get the actual transcript data
+            transcript_data = transcript.fetch()
+            return ' '.join([entry['text'] for entry in transcript_data])
+
+        except TranscriptsDisabled:
+            if self.verbose:
+                print(f"Warning: Transcripts are disabled for video {video_id}")
+            return None
+        except NoTranscriptFound:
+            if self.verbose:
+                print(f"Warning: No transcript found for video {video_id}")
+            return None
         except Exception as e:
-            print(f"Warning: Could not get transcript for video {video_id}: {str(e)}")
-            return None 
+            if self.verbose:
+                print(f"Warning: Could not get transcript for video {video_id}: {str(e)}")
+            return None
+
+    def _check_video_availability(self, video_id: str) -> bool:
+        """Check if a video is available and not region-restricted."""
+        try:
+            # Try to access video metadata using yt-dlp
+            with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+                ydl.extract_info(f"https://www.youtube.com/watch?v={video_id}", 
+                               download=False,
+                               process=False)
+            return True
+        except Exception as e:
+            if self.verbose:
+                print(f"Warning: Video {video_id} is not accessible: {str(e)}")
+            return False 

@@ -1,19 +1,21 @@
+"""
+YouTube Playlist Summary
+Copyright (c) 2024 Carlos Manzanedo Rueda (@cmanaha)
+
+Licensed under the MIT License (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    https://opensource.org/licenses/MIT
+"""
+
 from typing import Optional, Set, Dict, Any
 from collections.abc import Callable
 from pydantic import BaseModel, Field
 from langchain_ollama import OllamaLLM
 from langchain.prompts import PromptTemplate
 import json
-
-class LLMConfig(BaseModel):
-    """Configuration for the LLM."""
-    model: str = Field(default="llama3.2")
-    temperature: float = Field(default=0.7)
-    format: str = Field(default="json")
-    num_thread: int = Field(default=4)
-    num_ctx: int = Field(default=16384)
-    repeat_last_n: int = Field(default=2)
-    num_gpu: int = Field(default=0)
+from llm_provider import LLMConfig, LLMProvider, RetryConfig
 
 class TranscriptProcessor:
     def __init__(
@@ -27,7 +29,9 @@ class TranscriptProcessor:
         # Configure LLM settings
         llm_config = LLMConfig(
             model=model,
-            num_thread=num_threads
+            num_thread=num_threads,
+            num_gpu=num_gpus,
+            retry=RetryConfig()  # Add retry configuration
         )
         
         # Store model name for testing
@@ -41,35 +45,51 @@ class TranscriptProcessor:
         if num_cpus > 0:
             llm_config.num_thread = num_cpus
         
-        self.llm: OllamaLLM = OllamaLLM(**llm_config.model_dump())
+        # Create LLM instance using provider
+        self.llm = LLMProvider.create_llm(llm_config)
+        
         self.batch_size: int = max(1, batch_size)
         
         # Define valid categories
+
+
         self.valid_categories: Set[str] = {
-            "Keynote", "Security", "GitOps", "AIML", "Sustainability",
-            "Scaling", "Performance", "Observability", "Data & Analytics",
-            "HPC", "Developer Experience", "Linux Foundation"
+            "Keynote", "Security", "GitOps", "AI & ML", "Sustainability",
+            "Scaling", "Scheduling", "Performance Engineering", "Observability", 
+            "Analytics", "Databases", "Operations"
+            "HPC", "Developer Experience", "Compute",
+            "Storage", "Networking", "Serverless","Architecture"           
         }
+
         self.filter_categories: Optional[Set[str]] = None
+        
+        # Add preselected categories storage
+        self.preselected_categories: Set[str] = set()
         
         # Prompt template for categorization
         self.category_prompt = PromptTemplate(
             template="""Based on the following video title and transcript, 
             choose the most appropriate category. Please do not make the category
             too specific, it should be a broad category. 
-            An example of categories that are good are: {categories}
+            
+            Previously used categories: {preselected_categories}
+            If the content is similar to any of the previously used categories, 
+            please reuse that category for better grouping.
+            
+            If no previous categories match, you can choose from these examples: {categories}
             
             Title: {title}
             Transcript: {transcript}
             
             Respond ONLY with a JSON object in this format:
             {{"category": "chosen_category"}}""",
-            input_variables=["categories", "title", "transcript"]
+            input_variables=["preselected_categories", "categories", "title", "transcript"]
         )
         
         # Prompt template for summarization
         self.summary_prompt = PromptTemplate(
-            template="""Provide a concise two-sentence summary of this video content.
+            template="""Provide a concise one paragraph with 3 sentences at least. Use an abstract style as the
+            one you would propose for a conference talk with the summary of this video content.
             
             Title: {title}
             Transcript: {transcript}
@@ -133,9 +153,13 @@ class TranscriptProcessor:
     def _get_category(self, title: str, transcript: str) -> str:
         """Get category for the video."""
         try:
+            # Format preselected categories for the prompt
+            preselected_cats = ", ".join(sorted(self.preselected_categories)) if self.preselected_categories else "Uncategorized"
+            
             # Invoke LLM for categorization
             response = self.llm.invoke(
                 self.category_prompt.format(
+                    preselected_categories=preselected_cats,
                     categories=", ".join(sorted(self.valid_categories)),
                     title=title,
                     transcript=transcript
@@ -151,6 +175,8 @@ class TranscriptProcessor:
                 normalized_category = self._normalize_category(category)
                 for valid_category in self.valid_categories:
                     if self._normalize_category(valid_category) == normalized_category:
+                        # Add to preselected categories for future use
+                        self.preselected_categories.add(valid_category)
                         return valid_category
             
             return category
